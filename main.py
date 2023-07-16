@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from pathlib import Path
@@ -33,7 +34,8 @@ async def sync_building():
 async def main():
     await sync_building()
 
-import asyncio
-loop = asyncio.get_event_loop()
-loop.run_until_complete(sync_building())
+
+if __name__ == '__main__':
+    asyncio.run(main())
+
 
