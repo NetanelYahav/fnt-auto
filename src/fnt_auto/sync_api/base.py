@@ -8,7 +8,7 @@ from fnt_auto.models.api import Login
 
 
 if typing.TYPE_CHECKING:
-    from fnt_auto._async_api.base import ResponseType
+    from fnt_auto.async_api.base import ResponseType
 
 
 logger = logging.getLogger(__package__)
