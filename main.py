@@ -269,6 +269,76 @@ class PartnerNodesImporter(NodesImporter):
         return list(nodes.values())
     
 
+class PartnerTraySectionsImporter(TraySectionsImporter):
+    
+    async def initialize(self):
+        await super().initialize()
+        self.fnt_campuses = utils.to_dict(await self.fnt_api.location.campus.get_all(), key='name')
+        self.fnt_nodes_types = utils.to_dict(await self.fnt_api.tray_mgmt.node.get_all_types(), key='type')
+    
+    async def collect_items(self) -> list[NodeCreateReq]:
+        zone_elid = self.fnt_campuses['PartnerNodes'].elid
+
+        summary = {
+            'Success': 0,
+            'Failed': 0,
+            'Skip': 0,
+            'Duplication': 0
+        }
+
+        FNT_TYPES = {'klozer 48': 'FIST-GB2-12', 'edge-cable': 'cable-edge-jb'}
+
+        types_mapping = {
+            'Pole': 'Pole',
+            'MH_Reg': 'MH_Reg',
+            'klozer 48': 'klozer 48',
+            'B_TB': 'B_TB',
+            'TS_UNDER': 'TS_UNDER',
+            'TS_OVER': 'TS_OVER',
+            'klozer FDT': 'klozer FDT',
+        }
+
+        with path.joinpath('test_data/nodes.json').open('r', encoding='utf-8') as f:
+            bezeq_data = geo.FeatureCollection(features=json.load(f)['features'])
+
+        nodes_feat = bezeq_data.filter(lambda feature: feature.properties.get('_class', '') == 'node')
+        
+        nodes: dict[str, NodeCreateReq] = {}
+
+        for node in nodes_feat:
+            node_type = node.properties['_type']
+            if node_type not in types_mapping:
+                types_mapping[node_type] = node_type
+            
+            node_id = node.properties['_id']
+            
+            if node_id in nodes:
+                summary['Duplication'] += 1
+
+            try:    
+                new_node = NodeCreateReq(
+                    zone_elid = zone_elid,
+                    type_elid = self.fnt_nodes_types[node_type].elid,
+                    # zone = ZoneQuery(campus_name='PartnerNodes', entity_name=ZoneType.CAMPUS),
+                    id = node_id,
+                    visible_id = node_id,
+                    coord_x = node.properties['_x'],
+                    coord_y = node.properties['_y'],
+                    c_node_owner = node.properties['owner'],
+                    c_import_origin = node.properties['origin']  
+                )
+            except (ValidationError, KeyError):
+                summary['Failed'] += 1
+                continue
+            
+            summary['Success'] += 1
+            nodes[node_id] = new_node
+        
+        self.parse_summary = summary
+        return list(nodes.values())
+    
+
+
 # def load_nodes(path: Path) -> None:
 #     zone_elid = get_zone_by_name('nodes', 'campus')
 #     if zone_elid is None:
@@ -325,21 +395,23 @@ class PartnerNodesImporter(NodesImporter):
 async def main(): 
     # await fnt_client.login()
     
-    # import_engines: list[ItemsImporter] = [
-    #     PartnerCampusesImporter(fnt_api),
-    #     PartnerBuildingsImporter(fnt_api),
-    #     PartnerSplittersImporter(fnt_api)
-    # ]
+    import_engines: list[ItemsImporter] = [
+        PartnerCampusesImporter(fnt_api),
+        PartnerBuildingsImporter(fnt_api),
+        PartnerSplittersImporter(fnt_api),
+        PartnerNodesImporter(fnt_api),
+        # PartnerTraySectionsImporter(fnt_api)
+    ]
 
-    # for engine in import_engines:
-    #     await engine.initialize()
-    #     await engine.make_import()
+    for engine in import_engines:
+        await engine.initialize()
+        await engine.make_import()
 
     # print(await fnt_api.tray_mgmt.node.get_master_data('POLE'))
 
-    node_importer = PartnerNodesImporter(fnt_api)
-    await node_importer.initialize()
-    await node_importer.make_import()
+    # node_importer = PartnerNodesImporter(fnt_api)
+    # await node_importer.initialize()
+    # await node_importer.make_import()
 
 
 if __name__ == '__main__':
