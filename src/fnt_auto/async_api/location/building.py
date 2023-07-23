@@ -8,7 +8,7 @@ class BuildingAPI(AsyncBaseAPI):
     async def create(self, building: BuildingCreateReq) -> 'ItemCreateRes':
         return ItemCreateRes(
             rest_request = building.model_copy(),
-            rest_response = await self.rest_action_request('building', 'create', building)
+            rest_response = await self.rest_request('building', 'create', building)
         )
         
     

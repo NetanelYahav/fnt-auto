@@ -40,4 +40,8 @@ class ItemCreateRes(ItemActionRes):
         return False
 
 class Link(RWModel):
-    linked_elid: str
+    linked_elid: Optional[str]
+
+class Restriction(RWModel):
+    value: Optional[str]
+    operator: str = '='

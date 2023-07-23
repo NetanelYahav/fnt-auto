@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 import logging
 import typing as t
+from pydantic import ValidationError
 from pprint import pformat
 from collections import defaultdict
 from fnt_auto.models.base import RestRequest
@@ -42,6 +43,7 @@ class ItemsImporter(ABC):
             'Good': 0,
             'JustImported': 0,
             'FailedCreate': 0,
+            'AttributeMissing': 0
         }
 
         total = len(new_items)
@@ -56,8 +58,13 @@ class ItemsImporter(ABC):
                 logger.info(f"      Item [{item_id}] already exist.")
                 summary['Good'] += 1
                 continue
+            try:
+                dcr = await self.fnt_item_api.create(item)
+            except (ValidationError, ValueError):
+                summary['AttributeMissing'] += 1
+                continue
 
-            dcr = await self.fnt_item_api.create(item)
+            
             if dcr.rest_response.success:
                 summary['Good'] += 1
                 summary['JustImported'] += 1

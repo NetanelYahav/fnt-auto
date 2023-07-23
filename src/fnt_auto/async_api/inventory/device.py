@@ -12,7 +12,7 @@ class DeviceAPI(AsyncBaseAPI):
         
         return ItemCreateRes(
             rest_request=device.model_copy(),
-            rest_response = await self.rest_action_request('deviceAll', operation, device)
+            rest_response = await self.rest_request('deviceAll', operation, device)
         )
     
     async def get_all(self) -> list[Device]:

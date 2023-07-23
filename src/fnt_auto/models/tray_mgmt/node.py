@@ -1,14 +1,15 @@
 from typing import Optional
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, validator
 from datetime import datetime
 
 from fnt_auto.models.api import RestRequest
 from fnt_auto.models.base import CustumAttribute, Link, RWModel
+from fnt_auto.models.location.zone import ZoneQuery
 
 class NodeMaster(RWModel):
     elid: str
-    description: str
-    manufacturer: str
+    description: Optional[str]
+    manufacturer: Optional[str]
     type: str
 
 class NodeCustomAttr(CustumAttribute):
@@ -31,8 +32,6 @@ class NodeAttr(RWModel):
     function: Optional[str] = None
 
 
-
-
 class NodeCreateReq(RestRequest, NodeAttr, NodeCustomAttr):
     type_elid: str = Field(..., exclude=True)
     zone_elid: str = Field(..., exclude=True)
@@ -44,10 +43,16 @@ class NodeCreateReq(RestRequest, NodeAttr, NodeCustomAttr):
     @computed_field
     def create_link_zone(self) -> Link:
         return Link(linked_elid=self.zone_elid)
-    
 
-class Node(NodeAttr, NodeCustomAttr, NodeMaster):
+class NodeCreateAdvanceReq(NodeCreateReq):
+    type_elid: Optional[str] = Field(default=None, exclude=True)
+    zone_elid: Optional[str] = Field(default=None, exclude=True)
+    type: str = Field(..., exclude=True)
+    zone: ZoneQuery = Field(..., exclude=True) 
+
+class Node(NodeAttr, NodeCustomAttr):
     elid: str
+    type_elid: str
     zone_elid: str
     campus_elid: str
     floor_elid: Optional[str]

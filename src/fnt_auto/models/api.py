@@ -43,5 +43,20 @@ class RestRequest(RWModel):
         #         value = {'linkedElid': value}
         #     update_attr[fn] = value
         # return update_attr
+        
+        rest_req = {
+            **self.model_dump(by_alias=True, exclude_defaults=True), 
+            **self.model_dump(by_alias=True, exclude_unset=True), 
+            **self.model_dump(by_alias=True, exclude_none=True)
+        }
 
-        return self.model_dump(by_alias=True, exclude_defaults=True)
+        if issubclass(type(self), RestQuery):
+            for field_name, restriction in rest_req.copy().items():
+                if 'value' not in restriction:
+                    rest_req.pop(field_name)
+            return {'restrictions': rest_req, "returnAttributes": []}
+        return rest_req
+    
+
+class RestQuery(RestRequest):
+    pass

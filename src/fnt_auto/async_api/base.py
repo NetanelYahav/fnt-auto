@@ -8,7 +8,6 @@ from fnt_auto.models.api import RestRequest ,RestResponse
 from fnt_auto.models import RWModel
 from fnt_auto.models.base import ItemActionRes, ItemCreateRes
 
-
 logger = logging.getLogger(__package__)
 
 T = typing.TypeVar('T', bound=RWModel)
@@ -18,8 +17,8 @@ class AsyncBaseAPI(ABC):
 
     def __init__(self, fnt_client: FntAsyncClient) -> None:
         self._fnt_client = fnt_client
-
-    async def rest_action_request(self, entity: str, operation: str, rest_req: RestRequest) -> 'RestResponse':
+ 
+    async def rest_request(self, entity: str, operation: str, rest_req: RestRequest) -> 'RestResponse':
         return await self._fnt_client.rest_request(entity, operation, rest_req.to_rest_request())
 
     @classmethod
@@ -37,11 +36,13 @@ class AsyncBaseAPI(ABC):
         return items
     
     async def create(self, device: RestRequest) -> 'ItemCreateRes':
-        pass
+        raise NotImplementedError("Method Create not implemeted")
     
     async def get_all(self) -> list[RWModel]:
-        pass
+        raise NotImplementedError("Method get_all not implemeted")
     
     async def get_all_types(self) -> list[RWModel]:
-        pass
-
+        raise NotImplementedError("Method get_all_types not implemeted")
+    
+    async def get_by_query(self, query: RWModel) -> list[RWModel]:
+        raise NotImplementedError("Method get_by_query not implemeted")

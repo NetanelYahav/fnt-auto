@@ -7,7 +7,7 @@ class CampusAPI(AsyncBaseAPI):
     async def create(self, campus: CampusCreateReq) -> 'ItemCreateRes':
         return ItemCreateRes(
             rest_request = campus.model_copy(),
-            rest_response = await self.rest_action_request('campus', 'create', campus)
+            rest_response = await self.rest_request('campus', 'create', campus)
         )
     
     async def get_all(self) -> list[Campus]:

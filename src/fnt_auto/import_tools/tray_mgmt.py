@@ -16,7 +16,7 @@ class NodesImporter(ItemsImporter):
         self.fnt_api = fnt_api
 
     async def initialize(self):
-        self.fnt_items_exist = utils.to_dict(await self.fnt_api.inventory.device.get_all(), key='id')
+        self.fnt_items_exist = utils.to_dict(await self.fnt_api.tray_mgmt.node.get_all(), key='id')
 
     async def _collect_items(self) -> list[NodeCreateReq]:
         return await self.collect_items()
