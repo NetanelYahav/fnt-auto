@@ -13,12 +13,15 @@ from fnt_auto.import_tools.base import ItemsImporter
 from fnt_auto.import_tools.location import CampusesImporter, BuildingsImporter
 from fnt_auto.import_tools.inventory import DevicesImporter
 from fnt_auto.import_tools.tray_mgmt import NodesImporter, TraySectionsImporter
+from fnt_auto.import_tools.inventory import JunctionBoxesFistImporter
 from fnt_auto.models.location.campus import CampusCreateReq
 from fnt_auto.models.location.building import BuildingCreateReq
 from fnt_auto.models.inventory.device import DeviceCreateInZoneReq, DeviceCreateReq, DeviceQuery, DeviceMasterQuery
 from fnt_auto.models.tray_mgmt.node import NodeCreateReq, NodeCreateAdvanceReq
 from fnt_auto.models.tray_mgmt.tray_section import TraySectionCreateReq
 from fnt_auto.models.location.zone import ZoneQuery, ZoneType
+from fnt_auto.models.inventory.junction_box import JunctionBoxFistCreateInNodeReq, JunctionBoxFistCreateReq
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +33,7 @@ logging.basicConfig(
 
 
 fnt_client = FntAsyncClient(base_url='http://iecinventory', username='command', password='KusAma772&')
-fnt_client._session_id='o3ol0AW0FN9VG2k7F1tNig'
+fnt_client._session_id='svNWpYvyoi6AlE3XqrtBww'
 
 fnt_api = FntAsyncAPI(fnt_client=fnt_client)
 
@@ -453,8 +456,9 @@ class PartnerTraySectionsImporter(TraySectionsImporter):
                     segment_length = trs.properties['segment_length']
                 )
     
-            except (ValidationError, KeyError):
+            except (ValidationError, KeyError) as err:
                 self.parse_summary['Failed'] += 1
+                logger.exception(err)
                 continue
             
             self.parse_summary['Success'] += 1
@@ -462,15 +466,19 @@ class PartnerTraySectionsImporter(TraySectionsImporter):
         
         return list(tray_sections.values())
     
-class PartnerJunctionBoxessImporter(JunctionBoxImporter):
+class PartnerJunctionBoxesFistImporter(JunctionBoxesFistImporter):
     
     async def initialize(self):
         await super().initialize()
         self.fnt_campuses = utils.to_dict(await self.fnt_api.location.campus.get_all(), key='name')
         self.fnt_buildings = utils.to_dict(await self.fnt_api.location.building.get_all(), key='name')
-        self.fnt_nodes_types = utils.to_dict(await self.fnt_api.tray_mgmt.node.get_all_types(), key='type')
+        self.fnt_jb_types = utils.to_dict(await fnt_api.inventory.junction_box_fist.get_all_types(), key='type')
+        self.fnt_nodes = utils.to_dict(await self.fnt_api.tray_mgmt.node.get_all(), key='id')
+
+        with path.joinpath('test_data/nodes.json').open('r', encoding='utf-8') as f:
+            self.bezeq_data = geo.FeatureCollection(features=json.load(f)['features'])
     
-    async def collect_items(self) -> list[NodeCreateReq]:
+    async def collect_items(self) -> list[JunctionBoxFistCreateReq]:
         self.parse_summary = {
             'Success': 0,
             'Failed': 0,
@@ -478,10 +486,10 @@ class PartnerJunctionBoxessImporter(JunctionBoxImporter):
             'Duplication': 0
         }
         
-        new_nodes = await self.collect_nodes_in_buildings() + await self.collect_regular_nodes()
-        return new_nodes
+        # new_nodes = await self.collect_jb_in_buildings() + await self.collect_jb_in_nodes()
+        return await self.collect_jb_in_nodes()
     
-    async def collect_nodes_in_buildings(self) -> list[NodeCreateReq]:
+    async def collect_jb_in_buildings(self) -> list[JunctionBoxFistCreateReq]:
             node_type = 'EP_BLDG'
             with path.joinpath('test_data/buildings.json').open('r', encoding='utf-8') as f:
                 buildings_feat = geo.FeatureCollection(features=json.load(f)['features'])
@@ -532,33 +540,20 @@ class PartnerJunctionBoxessImporter(JunctionBoxImporter):
                 buildings[unique_id] = new_node
             return list(buildings.values())
         
-    async def collect_regular_nodes(self) -> list[NodeCreateReq]:
-            zone_elid = self.fnt_campuses['PartnerNodes'].elid
-            FNT_TYPES = {'klozer 48': 'FIST-GB2-12', 'edge-cable': 'cable-edge-jb'}
-
+    async def collect_jb_in_nodes(self) -> list[JunctionBoxFistCreateReq]:
+            # FNT_TYPES = {'klozer 48': 'FIST-GB2-12', 'edge-cable': 'cable-edge-jb'}
             types_mapping = {
-                'Pole': 'POLE',
-                'MH_Reg': 'MH_Reg',
-                'klozer 48': 'klozer 48',
-                'B_TB': 'B_TB',
-                'TS_UNDER': 'TS_UNDER',
-                'TS_OVER': 'TS_OVER',
-                'klozer FDT': 'klozer FDT',
+                'klozer 48': 'FIST_JBOX'
             }
 
-            with path.joinpath('test_data/nodes.json').open('r', encoding='utf-8') as f:
-                bezeq_data = geo.FeatureCollection(features=json.load(f)['features'])
-
-            nodes_feat = bezeq_data.filter(lambda feature: feature.properties.get('_class', '') == 'node')
+            nodes_feat = self.bezeq_data.filter(lambda feature: feature.properties.get('_class', '') == 'node')
             
-            nodes: dict[str, NodeCreateReq] = {}
+            nodes: dict[str, JunctionBoxFistCreateInNodeReq] = {}
 
             for node in nodes_feat:
-                node_type = node.properties['_type']
-                if node_type not in types_mapping:
-                    types_mapping[node_type] = node_type
-                else:
-                    node_type = types_mapping[node_type]
+                junction_box = node.properties.get('junction_box')
+                if junction_box is None:
+                    continue
                 
                 node_id = node.properties['_id']
                 
@@ -567,94 +562,38 @@ class PartnerJunctionBoxessImporter(JunctionBoxImporter):
                     continue
 
                 try:    
-                    new_node = NodeCreateReq(
-                        zone_elid = zone_elid,
-                        type_elid = self.fnt_nodes_types[node_type].elid,
-                        # zone = ZoneQuery(campus_name='PartnerNodes', entity_name=ZoneType.CAMPUS),
-                        id = node_id,
-                        visible_id = node_id,
-                        coord_x = node.properties['_x'],
-                        coord_y = node.properties['_y'],
-                        c_node_owner = node.properties['owner'],
-                        c_import_origin = node.properties['origin']  
+                    new_jb = JunctionBoxFistCreateInNodeReq(
+                        node_elid = self.fnt_nodes[node_id].elid,
+                        type_elid = self.fnt_jb_types[types_mapping[junction_box]].elid,
+                        id = f"CE-{node_id}"
                     )
+
                 except (ValidationError, KeyError) as err:
                     self.parse_summary['Failed'] += 1
                     logger.exception(err)
                     continue
                 
                 self.parse_summary['Success'] += 1
-                nodes[node_id] = new_node
+                nodes[node_id] = new_jb
         
             return list(nodes.values())
     
-
-# splitters = properties.get('splitter', [])
-#     if not splitters:
-#         return building_elid
-#     splitters_device_master = get_splitters_device_master()
-#     for splitter in splitters:
-#         splitter_name = f"SPLITTER_{'x'.join(splitter.split('/'))}"
-#         if splitter_name not in splitters_device_master:
-#             logger.error(f'Failed to find splitter device master for {splitter_name}')
-#             continue
-#         splitter_elid = splitters_device_master.get(splitter_name)
-#         res, err = place_splitter_in_zone(building_elid, splitter_elid, splitter_name)
-#         if err is not None:
-#             logger.error(f'Failed to place splitter in zone: {err}')
-#             continue
-#         logger.info(f'Placed {splitter_name} in {properties["id"]} ({res["returnData"]["elid"]})')
-#     return building_elid
-
-# def load_nodes(path: Path) -> None:
-#     zone_elid = get_zone_by_name('nodes', 'campus')
-#     if zone_elid is None:
-#         zone_elid = create_campus('nodes', 'campus')
-
-#     # FIXME make name of the file smarter
-#     with path.joinpath('nodes.json').open('r', encoding='utf-8') as f:
-#         bezeq_data = FeatureCollection(features=json.load(f)['features'])
-
-#     node_cache = load_nodes_cache()
-
-#     nodes = bezeq_data.filter(lambda feature: feature.properties.get('_class', '') == 'node')
-#     for node in nodes:
-#         node_type = node.properties['_type']
-#         if node_type not in types_mapping:
-#             types_mapping[node_type] = node_type
-#         node_id = node.properties['_id']
-#         if node_id in node_cache:
-#             continue
-#         node_elid = create_node(node, zone_elid)
-#         junction_box = node.properties.get('junction_box')
-#         node_cache[node.properties['_id']] = node_elid
-#         if junction_box is None:
-#             continue
-#         type_name = FNT_TYPES.get(junction_box)
-#         if type_name is None:
-#             logger.error(f'Failed to find type for {junction_box}')
-#             continue
-#         place_junction_box_fist_in_node(node_elid, node.properties['_id'], type_name)
-
-
-
 async def main(): 
     # await fnt_client.login()
-    pass
-    # import_engines: list[ItemsImporter] = [
-    #     # PartnerCampusesImporter(fnt_api),
-    #     # PartnerBuildingsImporter(fnt_api),
-    #     # PartnerDevicesImporter(fnt_api),
-    #     # PartnerNodesImporter(fnt_api),
-    #     # PartnerTraySectionsImporter(fnt_api)
-    #     PartnerJunctionBoxesImporter(fnt_api)
-    # ]
+    import_engines: list[ItemsImporter] = [
+        # PartnerCampusesImporter(fnt_api),
+        # PartnerBuildingsImporter(fnt_api),
+        # PartnerDevicesImporter(fnt_api),
+        # PartnerNodesImporter(fnt_api),
+        # PartnerTraySectionsImporter(fnt_api),
+        PartnerJunctionBoxesFistImporter(fnt_api)
+    ]
 
-    # for engine in import_engines:
-    #     await engine.initialize()
-    #     # await engine._collect_items()
-    #     # print(engine.parse_summary)
-    #     await engine.make_import()
+    for engine in import_engines:
+        await engine.initialize()
+        # await engine._collect_items()
+        # print(engine.parse_summary)
+        await engine.make_import()
 
 
     # fnt_spliiters = utils.to_dict_list(await fnt_api.inventory.device.get_by_query(DeviceQuery(type='SPLITTER*')), key='zone_elid')
@@ -692,8 +631,8 @@ async def main():
     # )
     # ret = await fnt_api.tray_mgmt.tray_section.create(req)
 
-    # print(ret)
-    
+    pass
+
 
 if __name__ == '__main__':
     asyncio.run(main())
