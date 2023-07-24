@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from fnt_auto.async_api.base import AsyncBaseAPI
 from fnt_auto.models.base import ItemCreateRes
-from fnt_auto.models.tray_mgmt.tray_mgmt import TraySectionCreateReq, TraySection, TraySectionMaster
+from fnt_auto.models.tray_mgmt.tray_section import TraySectionCreateReq, TraySection, TraySectionMaster
 
 class TraySectionAPI(AsyncBaseAPI):
 

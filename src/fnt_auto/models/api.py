@@ -50,13 +50,23 @@ class RestRequest(RWModel):
             **self.model_dump(by_alias=True, exclude_none=True)
         }
 
-        if issubclass(type(self), RestQuery):
-            for field_name, restriction in rest_req.copy().items():
-                if 'value' not in restriction:
-                    rest_req.pop(field_name)
-            return {'restrictions': rest_req, "returnAttributes": []}
         return rest_req
     
 
 class RestQuery(RestRequest):
-    pass
+    def to_rest_request(self) -> dict[str, Any]:
+        rest_req = {
+            **self.model_dump(by_alias=True, exclude_defaults=True), 
+            **self.model_dump(by_alias=True, exclude_unset=True), 
+            **self.model_dump(by_alias=True, exclude_none=True)
+        }
+
+        ret = {'restrictions': {}, "returnAttributes": []}
+        for field_name, value in rest_req.items():
+            operator = '='
+            if value is not None and type(value) == str and '*' in value:
+                operator = 'like'
+            ret['restrictions'][field_name] = {'value': value, 'operator': operator}
+
+        return ret
+    

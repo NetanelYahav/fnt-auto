@@ -4,7 +4,6 @@ from enum import Enum
 
 from fnt_auto.models import RWModel
 from fnt_auto.models.api import RestQuery
-from fnt_auto.models.base import Restriction
 
 class ZoneType(str, Enum):
     CAMPUS= 'campus'
@@ -13,31 +12,11 @@ class ZoneType(str, Enum):
     ROOM = 'room'
 
 class ZoneQuery(RestQuery):
-    campus_name: str = Field(exclude=True)
-    building_name: Optional[str] = Field(default=None, exclude=True)
-    floor_name: Optional[str] = Field(default=None, exclude=True)
-    room_name: Optional[str] = Field(default=None, exclude=True)
-    entity_name: Optional[ZoneType] = Field(default=None, exclude=True)
-
-    @computed_field
-    def campus(self) -> Restriction:
-        return Restriction(value=self.campus_name)
-    
-    @computed_field
-    def building(self) -> Restriction:
-        return Restriction(value=self.building_name)
-    
-    @computed_field
-    def floor(self) -> Restriction:
-        return Restriction(value=self.floor_name)
-    
-    @computed_field
-    def room(self) -> Restriction:
-        return Restriction(value=self.room_name)
-    
-    @computed_field
-    def target_sub_entity(self) -> Restriction:
-        return Restriction(value=self.entity_name)
+    campus: Optional[str] = Field(default=None)
+    building: Optional[str] = Field(default=None)
+    floor: Optional[str] = Field(default=None)
+    room: Optional[str] = Field(default=None)
+    entity: Optional[ZoneType] = Field(default=None)
     
 
 class Zone(RWModel):

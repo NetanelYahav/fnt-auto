@@ -13,7 +13,7 @@ class FntAsyncClient(AsyncClient):
     _session_id: str
 
     def __init__(self, base_url: str, username: str, password: str) -> None:
-        super().__init__(base_url=base_url.rstrip('/'), timeout=30)
+        super().__init__(base_url=base_url.rstrip('/'), timeout=300)
         self._username = username
         self._password = password
 
@@ -38,8 +38,7 @@ class FntAsyncClient(AsyncClient):
         logger.error(response.json())
         return response.json()
     
-    async def rest_request(
-        self, entity: str, operation: str, data:dict[str, t.Any]) -> 'RestResponse':
+    async def rest_request(self, entity: str, operation: str, data:dict[str, t.Any]) -> 'RestResponse':
         logger.info(f"About to {operation} {entity}:")
         logger.info(f"\tRequest content: {data}")
         response = await self.post(f'/axis/api/rest/entity/{entity}/{operation}', params={'sessionId': self._session_id}, json=data)
@@ -55,9 +54,28 @@ class FntAsyncClient(AsyncClient):
             logger.debug(f"\tResponse content: {pformat(ret.data)}")
         else:
             ret.message = response.json().get('status',{}).get('message')
-            print(response.json())
             logger.warning(f"\tFailed to {operation} {entity}: {ret.message}")
         return ret
+
+    async def rest_elid_request(self, entity: str, elid:str, operation: str, data:dict[str, t.Any]) -> 'RestResponse':
+        logger.info(f"About to {operation} {entity} on item [{elid}]:")
+        logger.info(f"\tRequest content: {data}")
+        response = await self.post(f'/axis/api/rest/entity/{entity}/{elid}/{operation}', params={'sessionId': self._session_id}, json=data)
+        
+        if response.status_code >= 500:
+            message = "There was unexpected FNT Rest error."
+            raise FntHttpError(message, response.status_code)
+        
+        ret = RestResponse(status_code=response.status_code, success=response.is_success)
+
+        if response.is_success:
+            ret.data = response.json().get('returnData')
+            logger.debug(f"\tResponse content: {pformat(ret.data)}")
+        else:
+            ret.message = response.json().get('status',{}).get('message')
+            logger.warning(f"\tFailed to {operation} {entity} on item [{elid}]: {ret.message}")
+        return ret
+    
 
         # async def rest_elid_request(self, entity: str, elid: str, operation: str, data: typing.Any, session_id: typing.Union[str, None] = None) -> 'ResponseType':
     #     response = await self._fnt_client.post(

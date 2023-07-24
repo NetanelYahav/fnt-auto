@@ -41,7 +41,3 @@ class ItemCreateRes(ItemActionRes):
 
 class Link(RWModel):
     linked_elid: Optional[str]
-
-class Restriction(RWModel):
-    value: Optional[str]
-    operator: str = '='

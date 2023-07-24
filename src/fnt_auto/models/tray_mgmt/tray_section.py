@@ -8,24 +8,25 @@ from fnt_auto.models.location.zone import ZoneQuery
 
 class TraySectionMaster(RWModel):
     elid: str
-    description: Optional[str]
-    manufacturer: Optional[str]
+    description: Optional[str] = None
+    manufacturer: Optional[str] = None
     type: str
 
 class TraySectionCustomAttr(CustumAttribute):
     c_tray_owner: Optional[str] = None
     c_remark: Optional[str] = None
-    c_node_addr: Optional[str] = None
-    c_node_addr2: Optional[str] = None
     c_import_origin: Optional[str] = None
-    c_exec_contractor: Optional[datetime] = None
-    c_last_seen: Optional[datetime] = None
+    c_exec_contractor: Optional[str] = None
+    c_last_seen: Optional[str] = None
+    c_geo_coords: Optional[str] = None
 
 class TraySectionAttr(RWModel):
     id: Optional[str] = None
     visible_id: Optional[str] = None
     description: Optional[str] = None
     coord_system: Optional[str] = None
+    segment_length: Optional[float] = None 
+
 
 class TraySectionCreateReq(RestRequest, TraySectionAttr, TraySectionCustomAttr):
     type_elid: str = Field(..., exclude=True)
@@ -54,11 +55,8 @@ class TraySectionAdvanceReq(TraySectionCreateReq):
 class TraySection(TraySectionAttr, TraySectionCustomAttr):
     elid: str
     type_elid: str
-    zone_elid: str
-    campus_elid: str
-    floor_elid: Optional[str]
-    room_elid: Optional[str]
     status_action: int
+
 
 
 # {

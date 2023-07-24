@@ -63,6 +63,8 @@ class ItemsImporter(ABC):
             except (ValidationError, ValueError):
                 summary['AttributeMissing'] += 1
                 continue
+            except Exception:
+                summary['FailedCreate'] += 1
 
             
             if dcr.rest_response.success:

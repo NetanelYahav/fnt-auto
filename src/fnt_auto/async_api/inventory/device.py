@@ -1,7 +1,8 @@
 from typing import Optional
 from fnt_auto.async_api.base import AsyncBaseAPI
+from fnt_auto.models import RWModel
 from fnt_auto.models.base import ItemCreateRes
-from fnt_auto.models.inventory.device import DeviceCreateReq, Device, DeviceCreateInZoneReq, DeviceMaster
+from fnt_auto.models.inventory.device import DeviceCreateReq, Device, DeviceCreateInZoneReq, DeviceMaster, DeviceQuery, DeviceMasterQuery
 
 class DeviceAPI(AsyncBaseAPI):
 
@@ -24,3 +25,11 @@ class DeviceAPI(AsyncBaseAPI):
         req = {'restrictions': {'elid': {'value': '*', 'operator': 'like'}}, 'returnAttributes': []}
         response = await self._fnt_client.rest_request('deviceMaster', 'query', req)
         return self.parse_rest_response(DeviceMaster, response)
+    
+    async def get_types_by_query(self, device: DeviceMasterQuery) -> list[DeviceMaster]:
+        response = await self.rest_request('deviceMasterDevice', 'query', device)
+        return self.parse_rest_response(DeviceMaster, response)
+    
+    async def get_by_query(self, device: DeviceQuery) -> list[Device]:
+        response = await self.rest_request('deviceAll', 'queryExtended', device)
+        return self.parse_rest_response(Device, response)

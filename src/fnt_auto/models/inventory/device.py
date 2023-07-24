@@ -5,7 +5,7 @@ from typing import Dict, Any
 
 from fnt_auto.models.api import RestRequest
 from fnt_auto.models.base import CustumAttribute, Link, RWModel
-
+from fnt_auto.models.api import RestQuery
 
 class DeviceCustomAttr(CustumAttribute):
     pass
@@ -53,4 +53,23 @@ class DeviceCreateInCabinetReq(DeviceCreateReq):
 
 class Device(DeviceAttr, DeviceCustomAttr):
     elid: str
+    zone_elid: Optional[str] = None
     id: str
+    type: Optional[str] = None
+
+
+class DeviceQuery(RestQuery):
+    campus_elid: Optional[str] = Field(default=None,)
+    building_elid: Optional[str] = Field(default=None)
+    floor_elid: Optional[str] = Field(default=None)
+    room_elid: Optional[str] = Field(default=None)
+    type: Optional[str] = Field(default=None)
+    # entity_name: Optional[ZoneType] = Field(default=None, exclude=True)
+
+class DeviceMasterQuery(RestQuery):
+    elid: Optional[str] = Field(default=None)
+    explanation: Optional[str] = Field(default=None)
+    manufacturer: Optional[str] = Field(default=None)
+    type: Optional[str] = Field(default=None)
+    function: Optional[str] = Field(default=None)
+    is_card: Optional[bool] = Field(default=None)
