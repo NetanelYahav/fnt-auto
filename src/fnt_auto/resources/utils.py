@@ -31,7 +31,7 @@ def convert_to_dict(items: list[T], keys:list[str]=['elid'], delimiter:str = ' |
     for item in items:
         if not issubclass(type(item), BaseModel):
             continue
-        key = delimiter.join([getattr(item, key) for key in keys])
+        key = delimiter.join([str(getattr(item, key)) for key in keys])
         if key.endswith(delimiter):
              key = key[:-len(delimiter)]
         ret[key] = item

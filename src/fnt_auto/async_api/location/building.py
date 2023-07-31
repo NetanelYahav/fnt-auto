@@ -10,7 +10,6 @@ class BuildingAPI(AsyncBaseAPI):
             rest_request = building.model_copy(),
             rest_response = await self.rest_request('building', 'create', building)
         )
-        
     
     async def get_all(self) -> list[Building]:
         req = {'restrictions': {'elid': {'value': '*', 'operator': 'like'}}, 'returnAttributes': []}

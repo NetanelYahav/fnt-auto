@@ -34,7 +34,7 @@ class ItemsImporter(ABC):
     def _identify_key(self, new_item:RestRequest) -> t.Optional[str]:
         pass
 
-    def already_exist(self, item: RestRequest) -> bool:
+    async def already_exist(self, item: RestRequest) -> bool:
         return self.identify_key(item) in self.fnt_items_exist
     
     async def _import_items(self, new_items: list[RestRequest]) -> dict[str, int]:
@@ -43,7 +43,9 @@ class ItemsImporter(ABC):
             'Good': 0,
             'JustImported': 0,
             'FailedCreate': 0,
-            'AttributeMissing': 0
+            'AttributeMissing': 0,
+            'JustDeleted': 0,
+            'FailedDelete': 0
         }
 
         total = len(new_items)
@@ -54,17 +56,33 @@ class ItemsImporter(ABC):
             item_id = self.identify_key(item)
             logger.info(f"\t{type(self).__name__}: Proccessing Item {i+1}/{total} - {item_id}:")         
  
-            if self.already_exist(item):
-                logger.info(f"      Item [{item_id}] already exist.")
+            if await self.already_exist(item):
+                logger.info(f"\t\tItem [{item_id}] already exist.")
                 summary['Good'] += 1
+                if self.cleanup and hasattr(self.fnt_items_exist[item_id], 'elid'):
+                    item_elid = getattr(self.fnt_items_exist[item_id], 'elid')
+                    res = await self.fnt_item_api.delete(item_elid)
+                    if res.success:
+                        summary['JustDeleted'] += 1
+                    else:
+                        summary['FailedDelete'] += 1
                 continue
+            
+            if self.cleanup:
+                continue
+
             try:
                 dcr = await self.fnt_item_api.create(item)
-            except (ValidationError, ValueError):
+                if dcr.new_item_elid:
+                    logger.info(f"\t\tCreated item ELID: [{dcr.new_item_elid}]")
+            except (ValidationError, ValueError) as err:
                 summary['AttributeMissing'] += 1
+                logger.exception(err)
                 continue
-            except Exception:
+            except Exception as err:
                 summary['FailedCreate'] += 1
+                logger.exception(err)
+                continue
 
             
             if dcr.rest_response.success:
@@ -76,7 +94,8 @@ class ItemsImporter(ABC):
                 summary['FailedCreate'] += 1
         return summary
     
-    async def make_import(self):
+    async def make_import(self, cleanup: bool = False):
+        self.cleanup = cleanup
         logger.info(f"{type(self).__name__}: Starting the parsing proccess")
         items = await self._collect_items()
         logger.info(f"{type(self).__name__}: Finish parsing proccess")

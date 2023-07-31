@@ -3,24 +3,26 @@ import typing as t
 from httpx import AsyncClient
 from pprint import pformat
 
-from fnt_auto.models.api import Login
+from fnt_auto.oracle.base_repository import OracleBaseRepository
+from fnt_auto.models.api import Login, RestLogin, DBLogin
 from fnt_auto.resources.exceptions import FntHttpError
 from fnt_auto.models.api import RestResponse
 
 logger = logging.getLogger(__package__)
 
-class FntAsyncClient(AsyncClient):
-    _session_id: str
+class FntAsyncClient(AsyncClient, OracleBaseRepository):
 
-    def __init__(self, base_url: str, username: str, password: str) -> None:
-        super().__init__(base_url=base_url.rstrip('/'), timeout=300)
-        self._username = username
-        self._password = password
+    def __init__(self, rest_login: RestLogin, db_login: DBLogin) -> None:
+        self.rest_login = rest_login
+        self.db_login = db_login
+
+        super().__init__(base_url=self.rest_login.base_url.rstrip('/'), timeout=300)
+        self._initilize(**db_login.model_dump())
 
     async def login(self, username: t.Union[str, None] = None, password: t.Union[str, None] = None) -> t.Union[str, None]:
         response = await self.post(
             '/axis/api/rest/businessGateway/login',
-            json=Login(user=username or self._username, password=password or self._password).model_dump(by_alias=True),
+            json=Login(user=username or self.rest_login.username, password=password or self.rest_login.password).model_dump(by_alias=True),
         )
         if response.is_success:
             self._session_id = response.json()['sessionId']
@@ -43,9 +45,9 @@ class FntAsyncClient(AsyncClient):
         logger.info(f"\tRequest content: {data}")
         response = await self.post(f'/axis/api/rest/entity/{entity}/{operation}', params={'sessionId': self._session_id}, json=data)
         
-        if response.status_code >= 500:
+        if response.status_code >= 500 or response.status_code == 401:
             message = "There was unexpected FNT Rest error."
-            raise FntHttpError(message, response.status_code)
+            raise FntHttpError(response.json().get('status',{}).get('message') or message, response.status_code)
         
         ret = RestResponse(status_code=response.status_code, success=response.is_success)
 
@@ -62,9 +64,9 @@ class FntAsyncClient(AsyncClient):
         logger.info(f"\tRequest content: {data}")
         response = await self.post(f'/axis/api/rest/entity/{entity}/{elid}/{operation}', params={'sessionId': self._session_id}, json=data)
         
-        if response.status_code >= 500:
+        if response.status_code >= 500 or response.status_code == 401:
             message = "There was unexpected FNT Rest error."
-            raise FntHttpError(message, response.status_code)
+            raise FntHttpError(response.json().get('status',{}).get('message') or message, response.status_code)
         
         ret = RestResponse(status_code=response.status_code, success=response.is_success)
 

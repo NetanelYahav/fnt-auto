@@ -21,6 +21,9 @@ class AsyncBaseAPI(ABC):
     async def rest_request(self, entity: str, operation: str, rest_req: RestRequest) -> 'RestResponse':
         return await self._fnt_client.rest_request(entity, operation, rest_req.to_rest_request())
 
+    async def rest_elid_request(self, entity: str, elid:str, operation: str, rest_req: RestRequest) -> 'RestResponse':
+        return await self._fnt_client.rest_elid_request(entity, elid, operation, rest_req.to_rest_request())
+
     @classmethod
     def parse_rest_response(cls, model_cls:type[T], response: RestResponse) -> list[T]:
         items: list[T] = []
@@ -46,3 +49,6 @@ class AsyncBaseAPI(ABC):
     
     async def get_by_query(self, query: RWModel) -> list[RWModel]:
         raise NotImplementedError("Method get_by_query not implemeted")
+
+    async def delete(self, elid: str) -> 'RestResponse':
+        raise NotImplementedError("Method Create not implemeted")

@@ -1,4 +1,3 @@
-import logging
 from enum import Enum, auto
 from typing import Any, Dict, List, Optional
 from httpx._status_codes import codes
@@ -6,7 +5,6 @@ from pydantic import validator
 from fnt_auto.models import RWModel
 from fnt_auto.models.api import RestRequest, RestResponse
 
-logger = logging.getLogger(__name__)
 
 
 class CustumAttribute(RWModel):
@@ -25,8 +23,6 @@ class ItemCreateRes(ItemActionRes):
         if response.success and response.data:
             if isinstance(response.data, dict):
                 values['new_item_elid'] = response.data.get('elid')
-        
-        logger.info(f"Created item ELID: [{values.get('new_item_elid')}]")
         return response
     
     @property
@@ -41,3 +37,8 @@ class ItemCreateRes(ItemActionRes):
 
 class Link(RWModel):
     linked_elid: Optional[str]
+
+class PortIdentifierLink(RWModel):
+    port_identifier: Optional[str]
+
+    

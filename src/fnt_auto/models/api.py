@@ -1,6 +1,19 @@
 from typing import Optional, Union, Any
 from fnt_auto.models import RWModel
 
+class RestLogin(RWModel):
+    base_url: str
+    username: str
+    password: str
+    
+class DBLogin(RWModel):
+    username: str
+    password: str
+    host: str
+    port: int
+    service_name:str
+
+
 class Login(RWModel):
     user: str
     password: str
@@ -55,14 +68,8 @@ class RestRequest(RWModel):
 
 class RestQuery(RestRequest):
     def to_rest_request(self) -> dict[str, Any]:
-        rest_req = {
-            **self.model_dump(by_alias=True, exclude_defaults=True), 
-            **self.model_dump(by_alias=True, exclude_unset=True), 
-            **self.model_dump(by_alias=True, exclude_none=True)
-        }
-
         ret = {'restrictions': {}, "returnAttributes": []}
-        for field_name, value in rest_req.items():
+        for field_name, value in self.rw_model_dump().items():
             operator = '='
             if value is not None and type(value) == str and '*' in value:
                 operator = 'like'
@@ -70,3 +77,12 @@ class RestQuery(RestRequest):
 
         return ret
     
+class DBQuery(RWModel):
+    def to_sql_constraint(self) -> str:
+        where_clause:str = ""
+        for i, field_name in enumerate(self.rw_model_dump()):
+            if i == 0:
+                where_clause = f"""\nWHERE (COALESCE(t."{field_name}", NULL) is NULL OR t."{field_name}" = :{field_name})\n"""
+            else:
+                where_clause = where_clause + f"""AND (COALESCE(t."{field_name}", NULL) is NULL OR t."{field_name}" = :{field_name})\n"""
+        return where_clause
