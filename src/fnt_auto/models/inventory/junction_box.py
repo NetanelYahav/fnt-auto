@@ -4,7 +4,7 @@ from pydantic import Field, computed_field
 from typing import Dict, Any
 
 from fnt_auto.models.api import RestRequest
-from fnt_auto.models.base import CustumAttribute, Link, RWModel
+from fnt_auto.models.base import CustumAttribute, Link, RWModel, ItemRead
 from fnt_auto.models.api import RestQuery
 
 class JunctionBoxCustomAttr(CustumAttribute):
@@ -73,8 +73,7 @@ class JunctionBoxFistCreateInNodeReq(JunctionBoxFistCreateReq):
     
 
 
-class JunctionBox(JunctionBoxAttr, JunctionBoxCustomAttr):
-    elid: str
+class JunctionBox(ItemRead, JunctionBoxAttr, JunctionBoxCustomAttr):
     zone_elid: Optional[str] = None
     id: str
     type: Optional[str] = None

@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 
 TOracleBaseRepository = typing.TypeVar('TOracleBaseRepository', bound='OracleBaseRepository')
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 
 
 def _row_factory(columns: list[str], *args: tuple[typing.Any, ...]) -> dict[str, typing.Any]:

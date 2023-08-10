@@ -1,3 +1,4 @@
+from pydantic import Field
 from typing import Optional, Union, Any
 from fnt_auto.models import RWModel
 
@@ -63,10 +64,10 @@ class RestRequest(RWModel):
             **self.model_dump(by_alias=True, exclude_none=True)
         }
 
-        return rest_req
-    
+        return rest_req 
 
 class RestQuery(RestRequest):
+    elid: Optional[str] = Field(default=None)
     def to_rest_request(self) -> dict[str, Any]:
         ret = {'restrictions': {}, "returnAttributes": []}
         for field_name, value in self.rw_model_dump().items():

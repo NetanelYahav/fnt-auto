@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from fnt_auto.async_api.base import AsyncBaseAPI
 from fnt_auto.models.base import ItemCreateRes
-from fnt_auto.models.tray_mgmt.node import NodeCreateReq, Node, NodeMaster, NodeCreateAdvanceReq
+from fnt_auto.models.tray_mgmt.node import NodeCreateReq, Node, NodeMaster, NodeCreateAdvanceReq, NodeQuery
 
 class NodeAPI(AsyncBaseAPI):
 
@@ -38,3 +38,12 @@ class NodeAPI(AsyncBaseAPI):
         response = await self._fnt_client.rest_request('nodeType', 'query', req)
         if (nodes:=self.parse_rest_response(NodeMaster, response)):
             return nodes[0]
+        return None
+        
+    async def get_by_query(self, node: NodeQuery) -> list[Node]:
+        response = await self.rest_request('node', 'query', node)
+        return self.parse_rest_response(Node, response)
+    
+    async def get_by_elid(self, elid:str) -> t.Optional[Node]:
+        nodes = await self.get_by_query(NodeQuery(elid=elid))
+        return nodes[0] if nodes else None

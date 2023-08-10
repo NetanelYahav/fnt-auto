@@ -33,3 +33,7 @@ class DeviceAPI(AsyncBaseAPI):
     async def get_by_query(self, device: DeviceQuery) -> list[Device]:
         response = await self.rest_request('deviceAll', 'queryExtended', device)
         return self.parse_rest_response(Device, response)
+    
+    async def get_by_elid(self, elid:str) -> Optional[Device]:
+        devices = await self.get_by_query(DeviceQuery(elid=elid))
+        return devices[0] if devices else None

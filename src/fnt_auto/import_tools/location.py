@@ -7,7 +7,7 @@ from fnt_auto.async_api import FntAsyncAPI
 from fnt_auto.resources import utils
 from fnt_auto.import_tools.base import ItemsImporter
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 
 
 class CampusesImporter(ItemsImporter):        

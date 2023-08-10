@@ -172,6 +172,12 @@ requires_python = ">=3.5"
 summary = "Type system extensions for programs checked with the mypy type checker."
 
 [[package]]
+name = "networkx"
+version = "3.1"
+requires_python = ">=3.8"
+summary = "Python package for creating and manipulating graphs and networks"
+
+[[package]]
 name = "numpy"
 version = "1.21.1"
 requires_python = ">=3.7"
@@ -296,7 +302,7 @@ summary = "Backported and Experimental Type Hints for Python 3.7+"
 lock_version = "4.2"
 cross_platform = true
 groups = ["default", "dev"]
-content_hash = "sha256:f186aee9d14b9c17221699cbac6e0948a7a74203161e5fef3a73996c2807fe69"
+content_hash = "sha256:5c98016f5a3e64e96e7483e2f52ccb664403fc10a43b3d73d2685757326a13fa"
 
 [metadata.files]
 "aiofile 3.8.7" = [
@@ -527,6 +533,10 @@ content_hash = "sha256:f186aee9d14b9c17221699cbac6e0948a7a74203161e5fef3a73996c2
 "mypy-extensions 1.0.0" = [
     {url = "https://files.pythonhosted.org/packages/2a/e2/5d3f6ada4297caebe1a2add3b126fe800c96f56dbe5d1988a2cbe0b267aa/mypy_extensions-1.0.0-py3-none-any.whl", hash = "sha256:4392f6c0eb8a5668a69e23d168ffa70f0be9ccfd32b5cc2d26a34ae5b844552d"},
     {url = "https://files.pythonhosted.org/packages/98/a4/1ab47638b92648243faf97a5aeb6ea83059cc3624972ab6b8d2316078d3f/mypy_extensions-1.0.0.tar.gz", hash = "sha256:75dbf8955dc00442a438fc4d0666508a9a97b6bd41aa2f0ffe9d2f2725af0782"},
+]
+"networkx 3.1" = [
+    {url = "https://files.pythonhosted.org/packages/a8/05/9d4f9b78ead6b2661d6e8ea772e111fc4a9fbd866ad0c81906c11206b55e/networkx-3.1-py3-none-any.whl", hash = "sha256:4f33f68cb2afcf86f28a45f43efc27a9386b535d567d2127f8f61d51dec58d36"},
+    {url = "https://files.pythonhosted.org/packages/fd/a1/47b974da1a73f063c158a1f4cc33ed0abf7c04f98a19050e80c533c31f0c/networkx-3.1.tar.gz", hash = "sha256:de346335408f84de0eada6ff9fafafff9bcda11f0a0dfaa931133debb146ab61"},
 ]
 "numpy 1.21.1" = [
     {url = "https://files.pythonhosted.org/packages/0b/a7/e724c8df240687b5fd62d8c71f1a6709d455c4c09432c7412e3e64f4cbe5/numpy-1.21.1.zip", hash = "sha256:dff4af63638afcc57a3dfb9e4b26d434a7a602d225b42d746ea7fe2edf1342fd"},

@@ -1,16 +1,16 @@
-import typing
+import typing as t
 import logging
-import typing
 from abc import ABC
 
 from fnt_auto.async_api.async_client import FntAsyncClient
 from fnt_auto.models.api import RestRequest ,RestResponse
 from fnt_auto.models import RWModel
-from fnt_auto.models.base import ItemActionRes, ItemCreateRes
+from fnt_auto.models.api import RestQuery
+from fnt_auto.models.base import ItemActionRes, ItemCreateRes, ItemRead
 
 logger = logging.getLogger(__package__)
 
-T = typing.TypeVar('T', bound=RWModel)
+T = t.TypeVar('T', bound=RWModel)
 
 class AsyncBaseAPI(ABC):
     _fnt_client: FntAsyncClient
@@ -38,17 +38,22 @@ class AsyncBaseAPI(ABC):
                 items.append(model_cls(**item))
         return items
     
+
+class ApiProtocol(t.Protocol):
     async def create(self, device: RestRequest) -> 'ItemCreateRes':
         raise NotImplementedError("Method Create not implemeted")
     
-    async def get_all(self) -> list[RWModel]:
+    async def get_all(self) -> list[ItemRead]:
         raise NotImplementedError("Method get_all not implemeted")
     
     async def get_all_types(self) -> list[RWModel]:
         raise NotImplementedError("Method get_all_types not implemeted")
     
-    async def get_by_query(self, query: RWModel) -> list[RWModel]:
+    async def get_by_query(self, query: RestQuery) -> list[ItemRead]:
         raise NotImplementedError("Method get_by_query not implemeted")
+    
+    async def get_by_elid(self, elid: str) -> t.Optional[ItemRead]:
+        raise NotImplementedError("Method get_by_elid not implemeted")
 
     async def delete(self, elid: str) -> 'RestResponse':
         raise NotImplementedError("Method Create not implemeted")

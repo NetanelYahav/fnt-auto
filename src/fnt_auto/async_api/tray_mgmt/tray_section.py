@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from fnt_auto.async_api.base import AsyncBaseAPI
 from fnt_auto.models.base import ItemCreateRes
-from fnt_auto.models.tray_mgmt.tray_section import TraySectionCreateReq, TraySection, TraySectionMaster
+from fnt_auto.models.tray_mgmt.tray_section import TraySectionCreateReq, TraySection, TraySectionMaster, TraySectionQuery
 
 class TraySectionAPI(AsyncBaseAPI):
 
@@ -28,3 +28,12 @@ class TraySectionAPI(AsyncBaseAPI):
         response = await self._fnt_client.rest_request('traySectionType', 'query', req)
         if (nodes:=self.parse_rest_response(TraySectionMaster, response)):
             return nodes[0]
+        return None
+    
+    async def get_by_query(self, trs: TraySectionQuery) -> list[TraySection]:
+        response = await self.rest_request('traySection', 'query', trs)
+        return self.parse_rest_response(TraySection, response)
+    
+    async def get_by_elid(self, elid:str) -> t.Optional[TraySection]:
+        tray_sections = await self.get_by_query(TraySectionQuery(elid=elid))
+        return tray_sections[0] if tray_sections else None

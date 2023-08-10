@@ -2,8 +2,8 @@ from typing import Optional
 from pydantic import Field, computed_field, validator
 from datetime import datetime
 
-from fnt_auto.models.api import RestRequest
-from fnt_auto.models.base import CustumAttribute, Link, RWModel
+from fnt_auto.models.api import RestRequest, RestQuery
+from fnt_auto.models.base import CustumAttribute, Link, RWModel, ItemRead
 from fnt_auto.models.location.zone import ZoneQuery
 
 class NodeMaster(RWModel):
@@ -50,11 +50,20 @@ class NodeCreateAdvanceReq(NodeCreateReq):
     type: str = Field(..., exclude=True)
     zone: ZoneQuery = Field(..., exclude=True) 
 
-class Node(NodeAttr, NodeCustomAttr):
-    elid: str
+class Node(ItemRead, NodeAttr, NodeCustomAttr):
     type_elid: str
     zone_elid: str
     campus_elid: str
     floor_elid: Optional[str]
     room_elid: Optional[str]
     status_action: int
+
+
+class NodeQuery(RestQuery, NodeCustomAttr):
+    elid: Optional[str] = Field(default=None,)
+    id: Optional[str] = Field(default=None,)
+    campus_elid: Optional[str] = Field(default=None,)
+    building_elid: Optional[str] = Field(default=None)
+    floor_elid: Optional[str] = Field(default=None)
+    room_elid: Optional[str] = Field(default=None)
+    type_elid: Optional[str] = Field(default=None)

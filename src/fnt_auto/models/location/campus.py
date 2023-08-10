@@ -1,8 +1,7 @@
 from typing import Optional
 
 from fnt_auto.models.api import RestRequest
-from fnt_auto.models.base import CustumAttribute
-from fnt_auto.models.base import RWModel
+from fnt_auto.models.base import CustumAttribute, RWModel, ItemRead
 
 class CampusCustomAttr(CustumAttribute):
     pass
@@ -17,6 +16,5 @@ class CampusAttr(RWModel):
 class CampusCreateReq(RestRequest, CampusAttr, CampusCustomAttr):
     name: str
     
-class Campus(CampusAttr, CampusCustomAttr):
-    elid: str
+class Campus(ItemRead, CampusAttr, CampusCustomAttr):
     name: str

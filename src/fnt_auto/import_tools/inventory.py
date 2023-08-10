@@ -2,13 +2,13 @@
 from abc import abstractmethod
 import logging
 import typing as t
-from fnt_auto.models.inventory.device import DeviceCreateReq
+from fnt_auto.models.inventory.device import DeviceCreateReq, Device
 from fnt_auto.models.inventory.junction_box import JunctionBoxFistCreateReq
 from fnt_auto.async_api import FntAsyncAPI
 from fnt_auto.resources import utils
 from fnt_auto.import_tools.base import ItemsImporter
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 
 class DevicesImporter(ItemsImporter):        
 

@@ -18,7 +18,7 @@ logging.Logger.trace = partialmethod(logging.Logger.log, logging.TRACE)
 logging.trace = partial(logging.log, logging.TRACE)
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 logging.basicConfig(
     format='%(asctime)s.%(msecs)03d | %(levelname)-8s | %(name)-8s | %(filename)s:%(funcName)s:%(lineno)d - %(message)s',
     level=logging.DEBUG,

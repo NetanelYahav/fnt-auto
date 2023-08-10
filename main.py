@@ -4,6 +4,9 @@ import logging
 from pathlib import Path
 from aiopath import AsyncPath
 from datetime import datetime
+from collections import namedtuple
+import networkx as nx
+from pprint import pformat
 
 from fnt_auto.async_api.async_client import FntAsyncClient
 from fnt_auto.oracle.base_repository import OracleBaseRepository
@@ -20,32 +23,39 @@ from fnt_auto.import_tools.connectivity import CablesImporter, CablesOnJunctionB
 from fnt_auto.models.location.campus import CampusCreateReq
 from fnt_auto.models.location.building import BuildingCreateReq
 from fnt_auto.models.inventory.device import DeviceCreateInZoneReq, DeviceCreateReq, DeviceQuery, DeviceMasterQuery
-from fnt_auto.models.tray_mgmt.node import NodeCreateReq, NodeCreateAdvanceReq
-from fnt_auto.models.tray_mgmt.tray_section import TraySectionCreateReq
+from fnt_auto.models.tray_mgmt.node import NodeCreateReq, NodeCreateAdvanceReq, NodeQuery
+from fnt_auto.models.tray_mgmt.tray_section import TraySectionCreateReq, TraySectionQuery
 from fnt_auto.models.location.zone import ZoneQuery, ZoneType
 from fnt_auto.models.inventory.junction_box import JunctionBoxFistCreateInNodeReq, JunctionBoxFistCreateReq
-from fnt_auto.models.connectivity.cable import CableCreateReq, SideOption, CableOnJunctionBoxCreateReq, CableJbToDeviceCreateReq, GeoDirectionType, CableJbToJbCreateReq
+from fnt_auto.models.connectivity.cable import CableCreateReq, SideOption, CableOnJunctionBoxCreateReq, CableJbToDeviceCreateReq, GeoDirectionType, CableJbToJbCreateReq, CableRouteHop, CableRouteQuery
 from fnt_auto.models.api import RestLogin, DBLogin
+
+Intersection = namedtuple('Intersection', ['id', 'type', 'handle'])
 
 logger = logging.getLogger(__name__)
 
 logging.basicConfig(
-    format='%(asctime)s.%(msecs)03d | %(levelname)-8s | %(filename)s:%(funcName)s:%(lineno)d | %(message)s\t',
+    format='%(asctime)s.%(msecs)03d %(name)s | %(levelname)-8s | %(message)s\t',
     level=logging.INFO,
     datefmt='%F %T',
 )
+
+logging.getLogger('httpx').setLevel(50)
+logging.getLogger('httpcore').setLevel(50)
 
 fnt_client = FntAsyncClient(
                     rest_login = RestLogin(base_url='http://iecinventory', username='command', password='KusAma772&'),
                     db_login = DBLogin(host='127.0.0.1', port=1521, service_name='fntdb', username='command', password='command')
             )
 
-fnt_client._session_id='vDTNfFUA8yB_CutpsRRLPg'
+fnt_client._session_id='p6YMCJ0LfuykAupPNzpAiA'
 
 fnt_api = FntAsyncAPI(fnt_client=fnt_client)
 
 path = Path.cwd()
 apath = AsyncPath(path.absolute())
+
+import_origin = 'tests/test_data/ארלוזורוב-ראשי_חדש.dxf'
 
 class PartnerCampusesImporter(CampusesImporter):
     
@@ -179,7 +189,7 @@ class PartnerDevicesImporter(DevicesImporter):
         
         return new_devices
     
-    async def collect_splitters_in_buildings(self):
+    async def collect_splitters_in_buildings(self) -> list[DeviceCreateReq]:
         buildings: dict[str, DeviceCreateReq] = {}
         for building_feat in self.buildings_feat:
             prop = building_feat.properties
@@ -229,7 +239,7 @@ class PartnerDevicesImporter(DevicesImporter):
         
         return list(buildings.values())
 
-    async def collect_panel4_in_building(self):
+    async def collect_panel4_in_building(self) -> list[DeviceCreateReq]:
         panel_type = 'PFO-4LC-FTTH'
         if (master_data:=self.fnt_devices_types.get(panel_type)) is None:
             return []
@@ -634,7 +644,7 @@ class PartnerCablesImporter(CablesImporter):
 
 class PartnerCablesOnJunctionBoxImporter(CablesOnJunctionBoxImporter):
     
-    async def initialize(self):
+    async def initialize(self) -> None:
         await super().initialize()
         self.fnt_cables_types = utils.to_dict(await fnt_api.connectivity.cable.get_all_types(), key='type')
         self.fnt_junction_boxes = utils.to_dict(await fnt_api.inventory.junction_box_fist.get_all(), key='id')
@@ -664,6 +674,8 @@ class PartnerCablesOnJunctionBoxImporter(CablesOnJunctionBoxImporter):
             'drop-12': 'FO-12',
             'drop-4': 'FO-4',
         }
+
+        self.cables_intersections: dict[str, list[Intersection]] = {}
     
     async def collect_items(self) -> list[CableOnJunctionBoxCreateReq]:
         self.parse_summary = {
@@ -672,7 +684,6 @@ class PartnerCablesOnJunctionBoxImporter(CablesOnJunctionBoxImporter):
             'Skip': 0,
             'Duplication': 0
         }
-        
         return await self.collect_cables_between_building_and_junction_box() + await self.collect_cables_between_junction_box_and_junction_box()
     
     async def collect_cables_between_building_and_junction_box(self) -> list[CableOnJunctionBoxCreateReq]:    
@@ -711,7 +722,7 @@ class PartnerCablesOnJunctionBoxImporter(CablesOnJunctionBoxImporter):
             if cable_id in cables:
                 self.parse_summary['Duplication'] += 1
                 continue
-            
+
             try:
                 cable = CableJbToDeviceCreateReq(
                     cable_id = cable_id,
@@ -726,6 +737,9 @@ class PartnerCablesOnJunctionBoxImporter(CablesOnJunctionBoxImporter):
                     port = 1,
                     cable_visible_id = f"{cable_id}|{str(prop['new-order'][0]) if prop['new-order'] else ''}" 
                 )
+                #Save context of route for later
+                self.cables_intersections[cable_id] = [Intersection(**start)] + [Intersection(**its) for its in prop.get('intersections', [])] + [Intersection(**end)]
+
             except (ValidationError, KeyError) as err:
                 self.parse_summary['Failed'] += 1
                 logger.exception(err)
@@ -782,6 +796,9 @@ class PartnerCablesOnJunctionBoxImporter(CablesOnJunctionBoxImporter):
                     to_geo_direction = GeoDirectionType.WEST,
                     cable_visible_id = f"{cable_id}|{str(prop['new-order'][0]) if prop['new-order'] else ''}" 
                 )
+                #Save context of route for later
+                self.cables_intersections[cable_id] = [Intersection(**start)] + [Intersection(**its) for its in prop.get('intersections', [])] + [Intersection(**end)]
+
             except (ValidationError, KeyError) as err:
                 self.parse_summary['Failed'] += 1
                 logger.exception(err)
@@ -792,7 +809,128 @@ class PartnerCablesOnJunctionBoxImporter(CablesOnJunctionBoxImporter):
             cables[cable_id] = cable
         
         return list(cables.values())
-    
+
+    async def make_import(self, cleanup:bool=False) -> None:
+        await super().make_import(cleanup=cleanup)
+        if not cleanup:
+            await self.import_cables_routes()
+
+    async def import_cables_routes(self) -> None:
+        (fnt_trs, fnt_node) = await asyncio.gather(
+            self.fnt_api.tray_mgmt.tray_section.get_by_query(TraySectionQuery(c_import_origin=import_origin)), 
+            self.fnt_api.tray_mgmt.node.get_by_query(NodeQuery(c_import_origin=import_origin))
+        )
+        fnt_tray_sections = utils.convert_to_dict(fnt_trs, keys=['from_node_elid', 'to_node_elid'])
+        fnt_nodes = utils.to_dict(fnt_node, key='id')
+        
+        G = nx.Graph()
+        for trs in fnt_tray_sections.values():
+            if not trs.from_node_elid or not trs.to_node_elid:
+                logger.warning(f"Tray Sections problem: {trs.id} - {trs.from_node_elid} {trs.to_node_elid}")
+                continue
+            G.add_edge(trs.from_node_elid, trs.to_node_elid)
+        
+        total = len(self.import_summary.items_imported)
+        routes_summary = {
+            'Total': total,
+            'Good': 0,
+            'JustImported': 0,
+            'FailedCreate': 0,
+            'AttributeMissing': 0,
+        }
+        for index, cable in enumerate(self.import_summary.items_imported, start=1):
+            if cable.id not in self.cables_intersections:
+                continue
+
+            route = self.cables_intersections[cable.id]
+            if not route:
+                continue
+
+            if route[0].type == 'building':
+                route.reverse()
+        
+            logger.info(f"Proccessing cable {index}/{total} [{cable.id}] route:")
+            logger.info(f"\tOrigin Route is: {route}")
+            
+            cable_route: list[CableRouteHop] = []
+            for i, node in enumerate(route[:-1]):
+                node_id_a = f"{f'BEP-{node.id}' if node.type == 'building' else node.id}"
+                next_node = route[i+1]
+                node_id_b = f"{f'BEP-{next_node.id}' if next_node.type == 'building' else next_node.id}"
+                
+                logger.info(f"\tProccessing node pair: {node_id_a} -- {node_id_b}")
+                
+                if (node_a:=fnt_nodes.get(node_id_a)) is None or (node_b:=fnt_nodes.get(node_id_b)) is None:
+                    logger.info(f"\t\tNode/s not exist in FNT")
+                    routes_summary['AttributeMissing'] += 1
+                    break
+                
+                trs = fnt_tray_sections.get(f"{node_a.elid} | {node_b.elid}")
+                trs_op = fnt_tray_sections.get(f"{node_b.elid} | {node_a.elid}")
+                
+                trs = trs or trs_op
+
+                if trs:
+                    hop = CableRouteHop(
+                        cable_elid=cable.elid,
+                        trs_elid = trs.elid,
+                        swap = trs_op is not None 
+                    )
+                    cable_route.append(hop)
+                    
+                    logger.info(f"\t\tTray Section found in FNT: {trs.id} ({hop.swap=})")
+                    continue
+                
+                logger.info(f"\t\tTray Section not exist in FNT. trying to find node path using Graph:")
+                try:
+                    paths = nx.all_shortest_paths(G, source=node_a.elid, target=node_b.elid)
+                    sub_route = next(paths)
+                except nx.exception.NetworkXNoPath:
+                    logger.info(f"\t\tNo route found between nodes")
+                    routes_summary['AttributeMissing'] += 1
+                    break
+
+                for j, sub_node_elid in enumerate(sub_route[:-1]):
+                    node_a_elid = sub_node_elid
+                    node_b_elid = sub_route[j+1]
+                    trs = fnt_tray_sections.get(f"{node_a_elid} | {node_b_elid}")
+                    trs_op = fnt_tray_sections.get(f"{node_b_elid} | {node_a_elid}")
+                    trs = trs or trs_op
+                    if trs:
+                        hop = CableRouteHop(
+                            cable_elid=cable.elid,
+                            trs_elid = trs.elid,
+                            swap = trs_op is not None 
+                        )
+                        logger.info(f"\t\t\tSub Tray Section found in FNT: {trs.id} ({hop.swap=})")
+                        cable_route.append(hop)
+
+            else:
+                logger.info(f"\tCable Route resloved successfully")
+                cable_route_exist = await self.fnt_api.connectivity.cable.get_cable_route_by_query(CableRouteQuery(cable_elid=cable.elid))
+                
+                if cable_route_exist:
+                    if cable_route == cable_route_exist:
+                        logger.info("\tCable route is the same as in FNT")
+                        routes_summary['Good'] += 1
+                    else:
+                        logger.info("\tCable route is not the same as in FNT. skiping")
+                    
+                    continue
+            
+                success = await self.fnt_api.connectivity.cable.route_cable(cable_route)
+                logger.info(f"\tAbout to create Cable route - [{success=}]")
+                if success:
+                    routes_summary['Good'] += 1
+                    routes_summary['JustImported'] += 1
+                else:
+                    routes_summary['FailedCreate'] += 1
+                
+        logger.info("==============================================================================================")
+        logger.info(f"Import status: {pformat(routes_summary)}")
+        logger.info("==============================================================================================")
+
+
 async def cleanup():
     fnt_buildings = await fnt_api.location.building.get_all()
     fnt_nodes = utils.to_dict(await fnt_api.tray_mgmt.node.get_all(), key='id')
@@ -834,7 +972,7 @@ async def cleanup():
     #     await fnt_client.rest_elid_request('dataCable',cable.elid, 'delete', data)
 
 
-async def main(): 
+async def main() -> None: 
     # await fnt_client.login()
     import_engines: list[ItemsImporter] = [
         # PartnerCampusesImporter(fnt_api),
@@ -853,9 +991,7 @@ async def main():
         # print(engine.parse_summary)
         await engine.make_import()
 
-
-    pass
-
+    
 if __name__ == '__main__':
     asyncio.run(main())
 

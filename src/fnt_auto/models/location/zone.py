@@ -2,7 +2,7 @@ from typing import Optional
 from pydantic import computed_field, Field
 from enum import Enum
 
-from fnt_auto.models import RWModel
+from fnt_auto.models.base import ItemRead
 from fnt_auto.models.api import RestQuery
 
 class ZoneType(str, Enum):
@@ -19,8 +19,7 @@ class ZoneQuery(RestQuery):
     entity: Optional[ZoneType] = Field(default=None)
     
 
-class Zone(RWModel):
-    elid: str
+class Zone(ItemRead):
     campus: str
     building: Optional[str]
     floor: Optional[str]

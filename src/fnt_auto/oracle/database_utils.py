@@ -12,7 +12,7 @@ if typing.TYPE_CHECKING:
     ...
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 
 
 def _log_query(query: str, query_params: typing.Sequence[typing.Any] | typing.Any) -> None:
@@ -59,7 +59,7 @@ def _pyformat_to_psql(
         return query, params.values()
     if query_params is None and len(keys) == 0:
         return query, None
-    if isinstance(query_params, BaseModel | dict):
+    if isinstance(query_params, (BaseModel, dict)):
         params = _extract_params(query_params, keys)
         _keys = params.keys()
     elif isinstance(query_params, list) and len(query_params) > 0:

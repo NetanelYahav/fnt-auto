@@ -1,10 +1,10 @@
 from typing import Optional
 from pydantic import Field
 
-from fnt_auto.models import RWModel
+from fnt_auto.models.base import ItemRead
 from fnt_auto.models.api import DBQuery
 
-class Connection(RWModel):
+class Connection(ItemRead):
     elid: str
     category: str
     table_name: str

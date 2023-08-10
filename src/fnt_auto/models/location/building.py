@@ -4,7 +4,7 @@ from pydantic import Field, computed_field
 from typing import Dict, Any
 
 from fnt_auto.models.api import RestRequest
-from fnt_auto.models.base import CustumAttribute, Link, RWModel
+from fnt_auto.models.base import CustumAttribute, Link, RWModel, ItemRead
 
 
 class BuildingCustomAttr(CustumAttribute):
@@ -35,7 +35,6 @@ class BuildingCreateReq(RestRequest, BuildingAttr, BuildingCustomAttr):
     def create_link_campus(self) -> Link:
         return Link(linked_elid=self.campus_elid)
 
-class Building(BuildingAttr, BuildingCustomAttr):
-    elid: str
+class Building(ItemRead, BuildingAttr, BuildingCustomAttr):
     name: str
     campus: str

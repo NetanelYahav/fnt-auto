@@ -5,11 +5,11 @@ from datetime import datetime
 from enum import Enum
 from abc import ABC
 
-from fnt_auto.models.api import RestRequest
-from fnt_auto.models.base import CustumAttribute, Link, RWModel, PortIdentifierLink
-from fnt_auto.models.api import RestQuery, RestResponse
+from fnt_auto.models.api import RestRequest, DBQuery
+from fnt_auto.models.base import CustumAttribute, Link, RWModel, PortIdentifierLink, ItemRead
+from fnt_auto.models.api import RestQuery
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger(__package__)
 
 class GeoDirectionType(str, Enum):
     EAST = 'EAST'
@@ -86,8 +86,7 @@ class CableQuery(RestQuery):
     type: Optional[str] = Field(default=None)
 
 
-class Cable(CableAttr, CableCustomAttr):
-    elid: str
+class Cable(ItemRead, CableAttr, CableCustomAttr):
     type_elid: str
     id: str
 
@@ -132,3 +131,14 @@ class CableJbToJbCreateReq(CableOnJunctionBoxCreateReq):
     @computed_field
     def connect_to_junction_box(self) -> JunctionBoxLink:
         return JunctionBoxLink(linked_elid=self.to_junction_box_elid, geo_direction=self.to_geo_direction)
+    
+class CableRouteHop(RWModel):
+    cable_elid: str
+    swap: bool
+    trs_elid: str
+
+
+class CableRouteQuery(DBQuery):
+    cable_elid: Optional[str] = Field(default=None)
+    trs_elid: Optional[str] = Field(default=None)
+    swap: Optional[bool] = Field(default=None)

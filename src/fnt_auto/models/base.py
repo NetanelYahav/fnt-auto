@@ -6,6 +6,9 @@ from fnt_auto.models import RWModel
 from fnt_auto.models.api import RestRequest, RestResponse
 
 
+class ItemRead(RWModel):
+    elid:str
+    id:Optional[str] = None
 
 class CustumAttribute(RWModel):
     pass

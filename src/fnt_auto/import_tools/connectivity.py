@@ -10,12 +10,7 @@ from fnt_auto.resources import utils
 from fnt_auto.import_tools.base import ItemsImporter
 
 async def get_existing_connection(fnt_api: FntAsyncAPI) -> dict[str, Cable]:
-    cables: list[Cable] = []
-    connections: list[Connection] = []
-
-    cables, connections = await asyncio.gather(
-        *[fnt_api.connectivity.cable.get_all(), fnt_api.connectivity.connection.get_all()]
-    )
+    cables, connections = await asyncio.gather(fnt_api.connectivity.cable.get_all(), fnt_api.connectivity.connection.get_all())
     
     cable_exist = utils.to_dict(cables)
 

@@ -77,16 +77,6 @@ class FntAsyncClient(AsyncClient, OracleBaseRepository):
             ret.message = response.json().get('status',{}).get('message')
             logger.warning(f"\tFailed to {operation} {entity} on item [{elid}]: {ret.message}")
         return ret
-    
-
-        # async def rest_elid_request(self, entity: str, elid: str, operation: str, data: typing.Any, session_id: typing.Union[str, None] = None) -> 'ResponseType':
-    #     response = await self._fnt_client.post(
-    #         f'/entity/{entity}/{elid}/{operation}', params={'sessionId': session_id or self._session_id}, json=data
-    #     )
-    #     if response.is_success:
-    #         return response.json(), None
-    #     logger.error(response.text)
-    #     return None, response.text
 
     # async def soap_request(
     #     self, operation: str, xml: str, session_id: typing.Union[str, None] = None

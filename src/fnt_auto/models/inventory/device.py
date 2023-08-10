@@ -4,7 +4,7 @@ from pydantic import Field, computed_field
 from typing import Dict, Any
 
 from fnt_auto.models.api import RestRequest
-from fnt_auto.models.base import CustumAttribute, Link, RWModel
+from fnt_auto.models.base import CustumAttribute, Link, RWModel, ItemRead
 from fnt_auto.models.api import RestQuery
 
 class DeviceCustomAttr(CustumAttribute):
@@ -51,14 +51,15 @@ class DeviceCreateInCabinetReq(DeviceCreateReq):
         return Link(linked_elid=self.cabinet_elid)
 
 
-class Device(DeviceAttr, DeviceCustomAttr):
-    elid: str
+class Device(ItemRead, DeviceAttr, DeviceCustomAttr):
     zone_elid: Optional[str] = None
     id: str
     type: Optional[str] = None
 
 
 class DeviceQuery(RestQuery):
+    elid: Optional[str] = Field(default=None,)
+    id: Optional[str] = Field(default=None,)
     campus_elid: Optional[str] = Field(default=None,)
     building_elid: Optional[str] = Field(default=None)
     floor_elid: Optional[str] = Field(default=None)
